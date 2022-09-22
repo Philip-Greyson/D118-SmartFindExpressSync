@@ -134,7 +134,7 @@ os.utime('W2SSO.csv', (now + 120,now+120))
 os.utime('E1PlusEmployeeWorkSchedule.csv', (now + 180,now+180))
 
 #after all the files are done writing and now closed, open an sftp connection to the server and place the file on there
-with pysftp.Connection(sftpHOST, username=sftpUN, private_key='private.pem') as sftp: # uses a private key file to authenticate with the server, need to pass the path
+with pysftp.Connection(sftpHOST, username=sftpUN, private_key='private.pem', cnopts=cnopts) as sftp: # uses a private key file to authenticate with the server, need to pass the path
 	print('SFTP connection established')
 	# print(sftp.pwd) # debug, show what folder we connected to
 	# print(sftp.listdir())  # debug, show what other files/folders are in the current directory
