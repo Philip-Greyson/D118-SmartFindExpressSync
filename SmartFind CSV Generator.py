@@ -125,7 +125,10 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con: # create the connect
 
 			except Exception as er:
 				print('High Level Error: '+str(er))
-
+# make sure output files are closed so we can mess with their timestamps next
+outputfile.close()
+outpute1.close()
+outputw2.close()
 
 # the SFE import goes in order of oldest file to newest, so we manually set the ages of the files to be in the correct order
 now = datetime.now().timestamp()
@@ -135,15 +138,17 @@ os.utime('E1PlusEmployeeWorkSchedule.csv', (now + 180,now+180))
 
 #after all the files are done writing and now closed, open an sftp connection to the server and place the file on there
 with pysftp.Connection(sftpHOST, username=sftpUN, private_key='private.pem', cnopts=cnopts) as sftp: # uses a private key file to authenticate with the server, need to pass the path
-	print('SFTP connection established')
+	print('SFTP connection established successfully')
+	print('SFTP connection established successfully', file=outputLog)
 	# print(sftp.pwd) # debug, show what folder we connected to
 	# print(sftp.listdir())  # debug, show what other files/folders are in the current directory
 	sftp.chdir('./upload1')  # change to the extensionfields folder
 	# print(sftp.pwd) # debug, make sure out changedir worked
 	# print(sftp.listdir())
-	sftp.put('P1ProfileBasic.csv')  # upload the first file onto the sftp server
-	sftp.put('W2SSO.csv')  # upload the second file onto the sftp server
-	sftp.put('E1PlusEmployeeWorkSchedule.csv') # upload final file
+	# need to include the preserve_mtime=True in the file puts below so that the file timestamps follow over for correct ordering
+	sftp.put('P1ProfileBasic.csv', preserve_mtime=True)  # upload the first file onto the sftp server
+	sftp.put('W2SSO.csv', preserve_mtime=True)  # upload the second file onto the sftp server
+	sftp.put('E1PlusEmployeeWorkSchedule.csv', preserve_mtime=True) # upload final file
 	print("Staff files placed on remote server")
 	print("Staff files placed on remote server", file=outputLog)
 outputLog.close() #close the log file
