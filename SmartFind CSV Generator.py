@@ -38,12 +38,12 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con: # create the connect
 				newestDCID = int(inputDCIDFile.readline())
 				print(newestDCID) #debug
 				cur = con.cursor()
-				# fetchall() is used to fetch all records from result set
-				cur.execute('SELECT teachers.email_addr, teachers.teachernumber, teachers.home_phone, teachers.first_name, teachers.last_name, teachers.email_addr, teachers.homeschoolid, teachers.schoolid, teachers.status, teachers.users_dcid FROM teachers WHERE teachers.email_addr IS NOT NULL AND NOT teachers.homeschoolid =2 ORDER BY teachers.users_dcid')
 
+				cur.execute('SELECT teachers.email_addr, teachers.teachernumber, teachers.home_phone, teachers.first_name, teachers.last_name, teachers.email_addr, teachers.homeschoolid, teachers.schoolid, teachers.status, teachers.users_dcid FROM teachers WHERE teachers.email_addr IS NOT NULL AND NOT teachers.homeschoolid = 2 ORDER BY teachers.users_dcid')
 				rows = cur.fetchall() #store the data from the query into the rows variable
 
-				#print('Record Type,Record Command,Record Number,Access,Telephone,First Name,Last Name,Address Line 1,Address Line 2,City,State,Zip,ExternalID,PIN,Gender,Ethnicity,Email Address,Language,IsEmployee,EmployeeActive,EmpCalendarCode,EmpBudgetCode,EmpIsItinerant,IsSub,SubActive,SubAvailable,SubAvailableLongTerm,SubCertified,SubAvailableGeneral,SubCallbackNum,SubLevel,SubPayRate,SubWorkUnits,SubOverlapping,IsAdmin,AdminActive,Restricted,Enable,Closing', file=outputfile)
+				# print('Record Type,Record Command,Record Number,Access,Telephone,First Name,Last Name,Address Line 1,Address Line 2,City,State,Zip,ExternalID,PIN,Gender,Ethnicity,Language,Email Address,IsEmployee,EmployeeActive,EmpCalendarCode,EmpBudgetCode,EmpIsItinerant,IsSub,SubActive,SubAvailable,SubAvailableLongTerm,SubCertified,SubAvailableGeneral,SubCallbackNum,SubLevel,SubPayRate,SubWorkUnits,SubOverlapping,IsAdmin,AdminActive,Restricted,Enable,Closing', file=outputfile) # debug header row
+
 				for entrytuple in rows: #go through each entry (which is a tuple) in rows. Each entrytuple is a single employee's data
 					try: # put each user in a try/except block so we can just skip individual users if they have errors
 						entry = list(entrytuple) #convert the tuple which is immutable to a list which we can edit. Now entry[] is an array/list of the employee data
@@ -77,23 +77,25 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con: # create the connect
 									isEmployee = "Y"
 									isSub = "" #set the sub field to null so it does not print and overwrite what is currently there
 									subActive = "" #set the sub active field to null so it does not print and overwrite what is currently there
-									empActive = "Y" if entry[8] == 1 else "N"  #check the teachers.status field to see if they are active
-									cur.execute('SELECT dcid FROM schoolstaff WHERE users_dcid = ' +str(empDCID)+ 'AND schoolid = ' +str(homeschool)) #do a new query on the schoolStaff table matching the user dcid and homeschool to get the schoolstaff entry dcid
-									schoolStaffRows = cur.fetchall()
-									schoolStaffDCID = str(schoolStaffRows[0][0]) if schoolStaffRows else "" #check to see if there is a result (schoolStaffRows) since old staff may not have it
+									empActive = "Y" if entry[8] == 1 else "N"  #check the teachers.status field to see if they are active at the homeschool. Presumably if they are inactive at the homeschool they should be inactive everywhere
+									
 									#print(schoolStaffRows) #debug to print result of query of schoolstaff table with the normal dcid
 									#print(schoolStaffDCID) #debug to print actual schoolstaffdcid
 
-									cur.execute('SELECT hr_calendar, sfe_am_time, sfe_pm_time, hr_contractemp, hr_sfe_position, sfe_start_time, sfe_end_time FROM u_def_ext_schoolstaff WHERE schoolstaffdcid = ' +str(schoolStaffDCID)) #take the entry dcid from schoolstaff table and pass to custom school staff table to get hr calender
+									cur.execute(f'SELECT calendar, am_time, pm_time, contractemp, sfe_position, start_time, end_time, custom_times from u_humanresources WHERE usersdcid = {empDCID}') # updated for new hr table extension of users
 									cusSchoolStaffRows = cur.fetchall()
+
 									#print(cusSchoolStaffRows) #debug to print what we get back from a query of u_def_ext_schoolstaff table with that schoolstaffdcid
+									
 									if cusSchoolStaffRows: #check to see if there is a result (cusSchoolStaffRows) since old staff may not have it
-										amHalfTime = cusSchoolStaffRows[0][1] if cusSchoolStaffRows[0][1] != None else None
-										pmHalfTime = cusSchoolStaffRows[0][2] if cusSchoolStaffRows[0][2] != None else None
+										amHalfTime = str(cusSchoolStaffRows[0][1]) if cusSchoolStaffRows[0][1] != None else None
+										pmHalfTime = str(cusSchoolStaffRows[0][2]) if cusSchoolStaffRows[0][2] != None else None
 										contractedEmployee = cusSchoolStaffRows[0][3] if cusSchoolStaffRows[0][3] != None else 0
 										classificationCode = cusSchoolStaffRows[0][4] if cusSchoolStaffRows[0][4] != None else None
-										startTime = cusSchoolStaffRows[0][5] if cusSchoolStaffRows[0][5] != None else None
-										endTime = cusSchoolStaffRows[0][6] if cusSchoolStaffRows[0][6] != None else None
+										startTime = str(cusSchoolStaffRows[0][5]) if cusSchoolStaffRows[0][5] != None else None
+										endTime = str(cusSchoolStaffRows[0][6]) if cusSchoolStaffRows[0][6] != None else None
+										# allowCustomTime = 'Y' if cusSchoolStaffRows[0][7] == 1 else 'N' # enable once the field is populated in PS
+										allowCustomTime = 'Y'
 										if cusSchoolStaffRows[0][0]!= None:
 											empCalendarCode = str(cusSchoolStaffRows[0][0]) #if the employee calendar code exists in PS, just put use it
 										else: #otherwise if the calendar code is null, we either want a blank, or to give a generic if the account is disabled since it may be old and not have a code
@@ -111,20 +113,20 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con: # create the connect
 									if empCalendarCode == "" and addOrChange == "A": #if they are a new addition and dont actually have a calendar code, we want to just default them to the teacher one
 										empCalendarCode = "100"
 								if (contractedEmployee != 1):
-									print('P,'+addOrChange+',1,'+accessID+','+telephoneNum+','+firstName+','+lastName+',,,,,,,,,,,'+emailAddr+','+isEmployee+','+empActive+','+empCalendarCode+',,,'+isSub+','+subActive+','+availNewJobs+',,,,,,,,,,,,Y,|', file=outputfile)
-									print('W,'+addOrChange+',2,1,'+accessID+','+emailAddr+',|', file=outputw2) #output the W2 SSO file
+									print(f'P,{addOrChange},1,{accessID},{telephoneNum},{firstName},{lastName},,,,,,,,,,,{emailAddr},{isEmployee},{empActive},{empCalendarCode},,,{isSub},{subActive},{availNewJobs},,,,,,,,,,,,Y,|', file=outputfile) # output to the p1 profile basic file
+									print(f'W,{addOrChange},2,1,{accessID},{emailAddr},|', file=outputw2) #output the W2 SSO file
 									if (amHalfTime and pmHalfTime and classificationCode and startTime and endTime): #only try to output to the E1 file if they have the 3 required pieces of data
-										print('E,'+addOrChange+',1,'+accessID+',1,'+str(homeschool)+',1,'+classificationCode+','+startTime+','+endTime+',N,NYYYYYN,'+amHalfTime+','+pmHalfTime+',Y,|', file=outpute1) #output the E1 file
+										print(f'E,{addOrChange},1,{accessID},1,{homeschool},1,{classificationCode},{startTime},{endTime},N,NYYYYYN,{amHalfTime},{pmHalfTime},{allowCustomTime},|', file=outpute1) #output the E1 file
 								else:
 									print("Skipping contract employee " + firstName + " " + lastName)
 					except Exception as er:
-						print('Error on user: ' + str(entry[9]) + ': ' + str(er))
+						print(f'ERROR on user: {entry[9]}: {er}')
 				inputDCIDFile.seek(0) #move the file pointer to the start of the file
 				inputDCIDFile.truncate() #delete the current text
 				inputDCIDFile.write(str(empDCID)) #write the last employee dcid as the newest one
 
 			except Exception as er:
-				print('High Level Error: '+str(er))
+				print(f'ERROR: High Level Error: {er}')
 # make sure output files are closed so we can mess with their timestamps next
 outputfile.close()
 outpute1.close()
@@ -136,7 +138,7 @@ os.utime('P1ProfileBasic.csv', (now + 60,now+60))
 os.utime('W2SSO.csv', (now + 120,now+120))
 os.utime('E1PlusEmployeeWorkSchedule.csv', (now + 180,now+180))
 
-#after all the files are done writing and now closed, open an sftp connection to the server and place the file on there
+# after all the files are done writing and now closed, open an sftp connection to the server and place the file on there
 with pysftp.Connection(sftpHOST, username=sftpUN, private_key='private.pem', cnopts=cnopts) as sftp: # uses a private key file to authenticate with the server, need to pass the path
 	print('SFTP connection established successfully')
 	print('SFTP connection established successfully', file=outputLog)
