@@ -94,8 +94,8 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con: # create the connect
 										classificationCode = cusSchoolStaffRows[0][4] if cusSchoolStaffRows[0][4] != None else None
 										startTime = str(cusSchoolStaffRows[0][5]) if cusSchoolStaffRows[0][5] != None else None
 										endTime = str(cusSchoolStaffRows[0][6]) if cusSchoolStaffRows[0][6] != None else None
-										# allowCustomTime = 'Y' if cusSchoolStaffRows[0][7] == 1 else 'N' # enable once the field is populated in PS
-										allowCustomTime = 'N'
+										allowCustomTime = 'Y' if cusSchoolStaffRows[0][7] == 1 else 'N' # new field allowing them to have custom times if the box is checked, otherwise not
+										# allowCustomTime = 'N'
 										if cusSchoolStaffRows[0][0]!= None:
 											empCalendarCode = str(cusSchoolStaffRows[0][0]) #if the employee calendar code exists in PS, just put use it
 										else: #otherwise if the calendar code is null, we either want a blank, or to give a generic if the account is disabled since it may be old and not have a code
