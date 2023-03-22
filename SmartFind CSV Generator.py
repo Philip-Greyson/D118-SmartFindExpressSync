@@ -116,7 +116,8 @@ with oracledb.connect(user=un, password=pw, dsn=cs) as con: # create the connect
 									print(f'P,{addOrChange},1,{accessID},{telephoneNum},{firstName},{lastName},,,,,,,,,,,{emailAddr},{isEmployee},{empActive},{empCalendarCode},,,{isSub},{subActive},{availNewJobs},,,,,,,,,,,,Y,|', file=outputfile) # output to the p1 profile basic file
 									print(f'W,{addOrChange},2,1,{accessID},{emailAddr},|', file=outputw2) #output the W2 SSO file
 									if (amHalfTime and pmHalfTime and classificationCode and startTime and endTime): #only try to output to the E1 file if they have the 3 required pieces of data
-										print(f'E,{addOrChange},1,{accessID},1,{homeschool},1,{classificationCode},{startTime},{endTime},N,NYYYYYN,{amHalfTime},{pmHalfTime},{allowCustomTime},|', file=outpute1) #output the E1 file
+										# print(f'E,{addOrChange},1,{accessID},1,{homeschool},1,{classificationCode},{startTime},{endTime},N,NYYYYYN,{amHalfTime},{pmHalfTime},{allowCustomTime}|', file=outpute1) #output the E1 file
+										print(f'E,{addOrChange},1,{accessID},1,{homeschool},1,{classificationCode},{startTime},{endTime},N,NYYYYYN,{amHalfTime},{pmHalfTime}|', file=outpute1) #output the E1 file, no custom time field
 								else:
 									print("Skipping contract employee " + firstName + " " + lastName)
 					except Exception as er:
