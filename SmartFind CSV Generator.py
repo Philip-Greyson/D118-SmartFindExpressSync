@@ -86,14 +86,16 @@ if __name__ == '__main__':  # main file execution
 														# print(schoolStaffRows) #debug to print result of query of schoolstaff table with the normal dcid
 														# print(schoolStaffDCID) #debug to print actual schoolstaffdcid
 
-														cur.execute(f'SELECT calendar, am_time, pm_time, contractemp, sfe_position, start_time, end_time, start_time_2, end_time_2, custom_times, time1_monday, time1_tuesday, time1_wednesday, time1_thursday, time1_friday, time2_monday, time2_tuesday, time2_wednesday, time2_thursday, time2_friday from u_humanresources WHERE usersdcid = {empDCID}')  # updated for new hr table extension of users
+														cur.execute(f'SELECT calendar, am_time, pm_time, contractemp, sfe_position, start_time, end_time, start_time_2, end_time_2, custom_times, time1_monday, time1_tuesday, time1_wednesday, time1_thursday, time1_friday, time2_monday, time2_tuesday, time2_wednesday, time2_thursday, time2_friday, am_time_2, pm_time_2 from u_humanresources WHERE usersdcid = {empDCID}')  # updated for new hr table extension of users
 														cusSchoolStaffRows = cur.fetchall()
 
 														# print(cusSchoolStaffRows) # debug to print what we get back from a query of u_def_ext_schoolstaff table with that schoolstaffdcid
 
 														if cusSchoolStaffRows:  # check to see if there is a result (cusSchoolStaffRows) since old staff may not have it
-															amHalfTime = str(cusSchoolStaffRows[0][1]) if cusSchoolStaffRows[0][1] is not None else None
-															pmHalfTime = str(cusSchoolStaffRows[0][2]) if cusSchoolStaffRows[0][2] is not None else None
+															amHalfTime = str(cusSchoolStaffRows[0][1]) if cusSchoolStaffRows[0][1] is not None else ""
+															amHalfTime2 = str(cusSchoolStaffRows[0][20]) if cusSchoolStaffRows[0][1] is not None else ""
+															pmHalfTime = str(cusSchoolStaffRows[0][2]) if cusSchoolStaffRows[0][2] is not None else ""
+															pmHalfTime2 = str(cusSchoolStaffRows[0][21]) if cusSchoolStaffRows[0][2] is not None else ""
 															contractedEmployee = cusSchoolStaffRows[0][3] if cusSchoolStaffRows[0][3] is not None else 0
 															classificationCode = cusSchoolStaffRows[0][4] if cusSchoolStaffRows[0][4] is not None else None
 															startTime = str(cusSchoolStaffRows[0][5]) if cusSchoolStaffRows[0][5] is not None else None
@@ -101,18 +103,18 @@ if __name__ == '__main__':  # main file execution
 															startTime2 = str(cusSchoolStaffRows[0][7]) if cusSchoolStaffRows[0][7] is not None else None
 															endTime2 = str(cusSchoolStaffRows[0][8]) if cusSchoolStaffRows[0][8] is not None else None
 															allowCustomTime = 'Y' if cusSchoolStaffRows[0][9] == 1 else 'N'  # new field allowing them to have custom times if the box is checked, otherwise not
-															# get the checkboxes that control whether the start/end times apply to each day. Should be 0 or 1, if its null treat it as 0
-															time1Monday = int(cusSchoolStaffRows[0][10]) if cusSchoolStaffRows[0][10] is not None else 0
-															time1Tuesday = int(cusSchoolStaffRows[0][11]) if cusSchoolStaffRows[0][11] is not None else 0
-															time1Wednesday = int(cusSchoolStaffRows[0][12]) if cusSchoolStaffRows[0][12] is not None else 0
-															time1Thursday = int(cusSchoolStaffRows[0][13]) if cusSchoolStaffRows[0][13] is not None else 0
-															time1Friday = int(cusSchoolStaffRows[0][14]) if cusSchoolStaffRows[0][14] is not None else 0
+															# get the checkboxes that control whether the start/end times apply to each day. Should be 0 or 1 in PS, set to Y if 1, if 0 or null set it to N
+															time1Monday = 'Y' if cusSchoolStaffRows[0][10] == 1 else 'N'
+															time1Tuesday = 'Y' if cusSchoolStaffRows[0][11] == 1 else 'N'
+															time1Wednesday = 'Y' if cusSchoolStaffRows[0][12] == 1 else 'N'
+															time1Thursday = 'Y' if cusSchoolStaffRows[0][13] == 1 else 'N'
+															time1Friday = 'Y' if cusSchoolStaffRows[0][14] == 1 else 'N'
 															# do the same as above but for the 2nd time entries
-															time2Monday = int(cusSchoolStaffRows[0][15]) if cusSchoolStaffRows[0][15] is not None else 0
-															time2Tuesday = int(cusSchoolStaffRows[0][16]) if cusSchoolStaffRows[0][16] is not None else 0
-															time2Wednesday = int(cusSchoolStaffRows[0][17]) if cusSchoolStaffRows[0][17] is not None else 0
-															time2Thursday = int(cusSchoolStaffRows[0][18]) if cusSchoolStaffRows[0][18] is not None else 0
-															time2Friday = int(cusSchoolStaffRows[0][19]) if cusSchoolStaffRows[0][19] is not None else 0
+															time2Monday = 'Y' if cusSchoolStaffRows[0][15] == 1 else 'N'
+															time2Tuesday = 'Y' if cusSchoolStaffRows[0][16] == 1 else 'N'
+															time2Wednesday = 'Y' if cusSchoolStaffRows[0][17] == 1 else 'N'
+															time2Thursday = 'Y' if cusSchoolStaffRows[0][18] == 1 else 'N'
+															time2Friday = 'Y' if cusSchoolStaffRows[0][19] == 1 else 'N'
 
 															# allowCustomTime = 'N'
 															if cusSchoolStaffRows[0][0] is not None:
@@ -134,8 +136,14 @@ if __name__ == '__main__':  # main file execution
 													if (contractedEmployee != 1):
 														print(f'P|{addOrChange}|1|{accessID}|{telephoneNum}|{firstName}|{lastName}|||||||||||{emailAddr}|{isEmployee}|{empActive}|{empCalendarCode}|||{isSub}|{subActive}|{availNewJobs}||||||||||||Y|', file=outputP1)  # output to the p1 profile basic file
 														print(f'W|{addOrChange}|2|1|{accessID}|{emailAddr}|', file=outputW2)  # output the W2 SSO file
-														if (amHalfTime and pmHalfTime and classificationCode and startTime and endTime):  # only try to output to the E1 file if they have the 3 required pieces of data
-															print(f'E|{addOrChange}|1|{accessID}|1|{homeschool}|1|{classificationCode}|{startTime}|{endTime}|N|NYYYYYN|{amHalfTime}|{pmHalfTime}|{allowCustomTime}|', file=outputE1)  # output the E1 file
+														if (classificationCode and startTime and endTime):  # only try to output to the E1 file if they have the 3 required pieces of data
+															if "Y" in (time2Monday, time2Tuesday, time2Wednesday, time2Thursday, time2Friday):  # check to see if any of the time 2 boxes are checked meaning they have different schedules per day
+																print(f'Found user with multiple schedules: {firstName} {lastName}')
+																# in the case they have multiple schedules, they get multiple lines on the E1 file, with the different days filled out Y/N depending on when the schedules apply
+																print(f'E|{addOrChange}|1|{accessID}|1|{homeschool}|1|{classificationCode}|{startTime}|{endTime}|N|N{time1Monday}{time1Tuesday}{time1Wednesday}{time1Thursday}{time1Friday}N|{amHalfTime}|{pmHalfTime}|{allowCustomTime}|', file=outputE1)  # print the first schedule on the first line wtih order code 1
+																print(f'E|{addOrChange}|1|{accessID}|2|{homeschool}|1|{classificationCode}|{startTime2}|{endTime2}|N|N{time2Monday}{time2Tuesday}{time2Wednesday}{time2Thursday}{time2Friday}N|{amHalfTime2}|{pmHalfTime2}|{allowCustomTime}|', file=outputE1)  # print the second schedule on a second line with order code 2
+															else:
+																print(f'E|{addOrChange}|1|{accessID}|1|{homeschool}|1|{classificationCode}|{startTime}|{endTime}|N|NYYYYYN|{amHalfTime}|{pmHalfTime}|{allowCustomTime}|', file=outputE1)  # output the E1 file
 															# print(f'E,{addOrChange},1,{accessID},1,{homeschool},1,{classificationCode},{startTime},{endTime},N,NYYYYYN,{amHalfTime},{pmHalfTime},|', file=outpute1) #output the E1 file, no custom time field
 													else:
 														print("Skipping contract employee " + firstName + " " + lastName)
