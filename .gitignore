@@ -5,3 +5,4 @@ P1ProfileBasic.csv
 sfe_log.txt
 private.pem
 known_hosts
+ruff.toml
