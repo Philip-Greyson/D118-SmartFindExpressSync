@@ -1,11 +1,16 @@
-"""Big script to handle syncing staff information from PS into SmartFind Express.
+"""Script to handle syncing staff information from PS into SmartFind Express.
+
+https://github.com/Philip-Greyson/D118-SmartFindExpressSync
 
 Handles the initial profile creation - P1ProfileBasic
 Also does single sign on information - W2SSO
 Finally has the staff position and work day info - E1PlusEmployeeWorkSchedule
-Pulls info from the teachers "table", schoolstaff, and the custom school staff extension table
+Pulls info from the teachers "table" and the custom hr extension table
 Tries to be smart about adding/changing staff members by keeping track of the most recent DCID value it has processed,
 though that seems uneccessary and the newest staff members dont always import anyways due to missing info.
+
+Needs oracledb: pip install oracledb --upgrade
+Needs pysftp: pip install pysftp --upgrade
 """
 
 # importing modules
@@ -16,18 +21,22 @@ from datetime import *
 import oracledb  # used to connect to PowerSchool database
 import pysftp  # used to connect to the Performance Matters sftp site and upload the file
 
-un = 'PSNavigator'  # PSNavigator is read only, PS is read/write
-pw = os.environ.get('POWERSCHOOL_DB_PASSWORD')  # the password for the PSNavigator account
-cs = os.environ.get('POWERSCHOOL_PROD_DB')  # the IP address, port, and database name to connect to
+SUB_BUILDING = 500  # the school ID for the substitute building in PowerSchool
+
+un = os.environ.get('POWERSCHOOL_READ_USER')  # username for read-only database user
+pw = os.environ.get('POWERSCHOOL_DB_PASSWORD')  # the password for the database account
+cs = os.environ.get('POWERSCHOOL_PROD_DB')  # the IP address, port, and database name to connect to in format x.x.x.x:port/db
+
 #set up sftp login info, stored as environment variables on system
-sftp_un = os.environ.get('SFE_SFTP_USERNAME')
-sftp_host = os.environ.get('SFE_SFTP_ADDRESS')
+sftp_un = os.environ.get('SFE_SFTP_USERNAME')  # username for the SFTP upload
+sftp_host = os.environ.get('SFE_SFTP_ADDRESS')  # server address for the SFTP upload, in our case its a powerschool.com subdomain
 cnopts = pysftp.CnOpts(knownhosts='known_hosts')  # connection options to use the known_hosts file for key validation
 
 print(f'Username: {un} | Password: {pw} | Server: {cs}')  # debug so we can see where oracle is trying to connect to/with
 print(f'SFTP Username: {sftp_un} | SFTP Server: {sftp_host}')  # debug so we can see what info sftp connection is using
 badnames = ['use', 'training1','trianing2','trianing3','trianing4','planning','admin','nurse','user','user ','payroll', 'human', 'benefits', 'test', 'testtt', 'do not', 'plugin', 'mba']
 
+# define a custom exception for users when their accessID (teachernumber) is too long
 class InvalidAccessIDError(Exception):
 	"""Raised when the accessID is greater than 9 characters."""
 
@@ -88,7 +97,7 @@ if __name__ == '__main__':  # main file execution
 													if accessID == 0 or (len(str(accessID)) > 9):
 														raise InvalidAccessIDError
 													# check if the user is a substitute teacher or not, set the sub variables accordingly
-													if homeschool == 500:  # check their homeschoolid, 500 is the sub building in our PS system
+													if homeschool == SUB_BUILDING:  # check their homeschoolid and see if it matches the sub building code
 														isEmployee = "N"  # set them to not be an employee (different than sub)
 														empActive = "N"  # set the employee active field to no so it de-activates them as an employee
 														isSub = "Y"
@@ -198,17 +207,17 @@ if __name__ == '__main__':  # main file execution
 
 				# after all the files are done writing and now closed, open an sftp connection to the server and place the file on there
 				with pysftp.Connection(sftp_host, username=sftp_un, private_key='private.pem', cnopts=cnopts) as sftp:  # uses a private key file to authenticate with the server, need to pass the path
-					print('SFTP connection established successfully')
-					print('SFTP connection established successfully', file=log)
+					print('INFO: SFTP connection established successfully')
+					print('INFO: SFTP connection established successfully', file=log)
 					# print(sftp.pwd) # debug, show what folder we connected to
 					# print(sftp.listdir())  # debug, show what other files/folders are in the current directory
-					sftp.chdir('./upload1')  # change to the extensionfields folder
+					sftp.chdir('./upload1')  # change to the upload1 folder
 					# print(sftp.pwd) # debug, make sure out changedir worked
 					# print(sftp.listdir())
 					# need to include the preserve_mtime=True in the file puts below so that the file timestamps follow over for correct ordering
 					sftp.put('P1ProfileBasic.csv', preserve_mtime=True)  # upload the first file onto the sftp server
 					sftp.put('W2SSO.csv', preserve_mtime=True)  # upload the second file onto the sftp server
 					sftp.put('E1PlusEmployeeWorkSchedule.csv', preserve_mtime=True) # upload final file
-					print("Staff files placed on remote server")
-					print("Staff files placed on remote server", file=log)
+					print("INFO: Staff files placed on remote server")
+					print("INFO: Staff files placed on remote server", file=log)
 				log.close()  # close the log file
